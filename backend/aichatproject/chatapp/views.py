@@ -14,6 +14,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
 from g4f.client import Client
+client = Client()
 from django.conf import settings
 from io import BytesIO
 import subprocess
@@ -39,10 +40,49 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from chatapp.models import BlogPost
 from chatapp.forms import LoginForm, RegisterForm, StartWritingForm, BlogPostForm
-
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+from langchain_community.vectorstores import FAISS
+from langchain_community.embeddings import HuggingFaceEmbeddings
 from chatapp.custom_gpt import LakshmiNarayananAI
 bot = LakshmiNarayananAI()
 pipe = None
+BASE_DIR = settings.BASE_DIR
+
+def save(self, path):
+    import os
+    from django.conf import settings
+
+    full_path = os.path.join(settings.BASE_DIR, path)
+
+    print("💾 Saving FAISS to:", full_path)
+
+    os.makedirs(full_path, exist_ok=True)
+
+    self.vector_store.save_local(full_path)
+
+    # ✅ VERIFY immediately
+    print("Files in folder:", os.listdir(full_path))
+
+def load(self, path):
+    import os
+    from django.conf import settings
+
+    full_path = os.path.join(settings.BASE_DIR, path)
+
+    print("📂 Loading FAISS from:", full_path)
+
+    if not os.path.exists(full_path):
+        raise Exception(f"❌ Folder not found: {full_path}")
+
+    print("Files inside:", os.listdir(full_path))
+
+    self.vector_store = FAISS.load_local(
+        full_path,
+        self.embeddings,
+        allow_dangerous_deserialization=True
+    )
+    
 
 def get_pipeline():
     global pipe
@@ -431,139 +471,74 @@ class ChatHistoryView(View):
         except ChatSession.DoesNotExist:
             return JsonResponse({'error': 'Session not found'}, status=404)
 
+
+
 class PDFChatbot:
 
     def __init__(self):
-        from langchain_community.embeddings import HuggingFaceEmbeddings
-        self.client = Client()
         self.embeddings = HuggingFaceEmbeddings(
-            model_name="sentence-transformers/all-MiniLM-L6-v2"
+            model_name="sentence-transformers/paraphrase-multilingual-MiniLM-L12-v2"
         )
         self.vector_store = None
-        self.pdf_text = ""
-        self.chunks = []
-    
-    def extract_text_from_pdf(self, pdf_path):
-        print("📄 Extracting text from PDF...")
-        text = ""
-        try:
-            with open(pdf_path, 'rb') as file:
-                pdf_reader = PyPDF2.PdfReader(file)
-                total_pages = len(pdf_reader.pages)
-                print(f"📚 Total pages: {total_pages}")
-                
-                for page_num, page in enumerate(pdf_reader.pages, 1):
-                    page_text = page.extract_text()
-                    text += page_text + "\n\n"
-                    print(f"✅ Processed page {page_num}/{total_pages}")
-                
-                self.pdf_text = text
-                print(f"✅ Extracted {len(text)} characters")
-                return text
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            return None
-    
-    def create_chunks(self, text, chunk_size=1000, chunk_overlap=200):
-        from langchain_text_splitters import RecursiveCharacterTextSplitter
-        
-        print(f"✂️ Splitting into chunks...")
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            length_function=len,
-            separators=["\n\n", "\n", " ", ""]
+
+    def load_pdf(self, pdf_path):
+        loader = PyPDFLoader(pdf_path)
+        documents = loader.load()
+
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=800,
+            chunk_overlap=100
         )
-        self.chunks = text_splitter.split_text(text)
-        print(f"✅ Created {len(self.chunks)} chunks")
-        return self.chunks
-    
-    def create_vector_store(self):
-        from langchain_community.vectorstores import FAISS
-        print("🔢 Creating vector embeddings...")
-        if not self.chunks:
-            print("❌ No chunks found.")
-            return None
-        self.vector_store = FAISS.from_texts(
-            texts=self.chunks,
-            embedding=self.embeddings
+
+        chunks = splitter.split_documents(documents)
+
+        self.vector_store = FAISS.from_documents(
+            chunks,
+            self.embeddings
         )
-        print("✅ Vector store created!")
-        return self.vector_store
-    
-    def save_vector_store(self, path="faiss_index"):
-        if self.vector_store:
-            self.vector_store.save_local(path)
-            print(f"💾 Saved to {path}")
-    
-    def load_vector_store(self, path="faiss_index"):
-        from langchain_community.vectorstores import FAISS
-        try:
-            self.vector_store = FAISS.load_local(
-                path, 
-                self.embeddings,
-                allow_dangerous_deserialization=True
-            )
-            print(f"✅ Loaded from {path}")
-            return True
-        except Exception as e:
-            print(f"❌ Error: {e}")
-            return False
-    
-    def find_relevant_chunks(self, query, k=3):
-        if not self.vector_store:
-            return []
-        docs = self.vector_store.similarity_search(query, k=k)
-        return [doc.page_content for doc in docs]
-    
-    def chat(self, user_question, max_context_length=3000):
-        if not self.vector_store:
-            return "❌ Please load a PDF first"
-        
-        print(f"🔍 Searching...")
-        relevant_chunks = self.find_relevant_chunks(user_question, k=4)
-        context = "\n\n---\n\n".join(relevant_chunks)
-        
-        if len(context) > max_context_length:
-            context = context[:max_context_length] + "..."
-        
+
+    def save(self, path):
+        self.vector_store.save_local(path)
+
+    def load(self, path):
+        self.vector_store = FAISS.load_local(
+            path,
+            self.embeddings,
+            allow_dangerous_deserialization=True
+        )
+
+    def ask(self, question):
+        docs = self.vector_store.similarity_search(question, k=4)
+
+        context = "\n\n".join([d.page_content for d in docs])
+
         prompt = f"""
-                You are a helpful AI assistant that answers questions based on PDF content.
+            You are a smart assistant.
 
-                **CONTEXT FROM PDF:**
-                {context}
+            Answer ONLY from the given context.
 
-                **USER QUESTION:**
-                {user_question}
+            If answer is not available, say:
+            "I cannot find any answers this in the document"
 
-                **INSTRUCTIONS:**
-                1. Answer based ONLY on the context
-                2. If not found, say "I cannot find this in the PDF"
-                3. Be accurate and concise
+            Respond in SAME language as question (English / Tamil / Tanglish).
 
-                **YOUR ANSWER:**
-                """
-        try:
-            response = self.client.chat.completions.create(
-                model="gpt-4",
-                messages=[{"role": "user", "content": prompt}],
-                web_search=False
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            return f"❌ Error: {e}"
+            Context:
+            {context}
+
+            Question:
+            {question}
+
+            Answer:
+            """
+        from g4f.client import Client
+        client = Client()
+        response = client.chat.completions.create(
+            model="gpt-4",
+            messages=[{"role": "user", "content": prompt}]
+        )
+
+        return response.choices[0].message.content
     
-    def load_pdf(self, pdf_path, save_index=True):
-        text = self.extract_text_from_pdf(pdf_path)
-        if not text:
-            return False
-        self.create_chunks(text)
-        self.create_vector_store()
-        if save_index:
-            self.save_vector_store()
-        print("✅ PDF loaded!")
-        return True
-
 chatbots = {}
 
 def pdf_chat_home(request):
@@ -588,113 +563,68 @@ def pdf_detail(request, doc_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def upload_pdf(request):
-    """POST - Upload and process PDF"""
-    if request.FILES.get('pdf'):
-        pdf_file = request.FILES['pdf']
-        title = request.POST.get('title', pdf_file.name)
-        
-        # Create document
+    if request.method == "POST" and request.FILES.get("pdf"):
+
+        pdf_file = request.FILES["pdf"]
         doc = PDFDocument.objects.create(
-            title=title,
+            title=pdf_file.name,
             pdf_file=pdf_file
         )
-        
-        pdf_path = doc.pdf_file.path
-        index_path = f"faiss_index_{doc.id}"
-        
-        # Process PDF
+
         bot = PDFChatbot()
-        success = bot.load_pdf(pdf_path, save_index=False)
-        
-        if success:
-            bot.save_vector_store(index_path)
-            doc.vector_index_path = index_path
-            doc.processed = True
-            doc.save()
-            chatbots[doc.id] = bot
-            
-            # Check if AJAX request
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': True,
-                    'document_id': doc.id,
-                    'message': 'PDF processed successfully!'
-                })
-            else:
-                # Redirect for normal form submission
-                return redirect('pdf_detail', doc_id=doc.id)
-        else:
-            doc.delete()
-            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Failed to process PDF'
-                }, status=500)
-            else:
-                return redirect('pdf_chat_home')
-    
-    return JsonResponse({'error': 'No PDF file'}, status=400)
+        bot.load_pdf(doc.pdf_file.path)
+
+        index_path = f"faiss_{doc.id}"
+        bot.save(index_path)
+
+        doc.vector_index_path = index_path
+        doc.processed = True
+        doc.save()
+
+        chatbots[doc.id] = bot
+        print(f"📄 Uploaded and processed PDF: {doc.title} (ID: {doc.id})")
+
+        return JsonResponse({
+            "success": True,
+            "doc_id": doc.id
+        })
+
+    return JsonResponse({"error": "Upload failed"}, status=400)
 
 @csrf_exempt
 @require_http_methods(["POST"])
 def chat_with_pdf(request):
-    """POST - Chat with PDF (AJAX only)"""
-    try:
-        data = json.loads(request.body)
-        doc_id = data.get('document_id')
-        question = data.get('question')
-        
-        if not question:
-            return JsonResponse({
-                'success': False,
-                'error': 'Question is required'
-            }, status=400)
-        
-        # Get document
-        doc = PDFDocument.objects.get(id=doc_id)
-        
-        # Get or load chatbot
-        if doc_id not in chatbots:
-            bot = PDFChatbot()
-            if not bot.load_vector_store(doc.vector_index_path):
-                return JsonResponse({
-                    'success': False,
-                    'error': 'Failed to load PDF index'
-                }, status=500)
-            chatbots[doc_id] = bot
-        else:
-            bot = chatbots[doc_id]
-        
-        # Get answer
-        answer = bot.chat(question)
-        
-        # Save to history
-        ChatHistory.objects.create(
-            document=doc,
-            question=question,
-            answer=answer
-        )
-        
-        return JsonResponse({
-            'success': True,
-            'answer': answer
-        })
-        
-    except PDFDocument.DoesNotExist:
-        return JsonResponse({
-            'success': False,
-            'error': 'Document not found'
-        }, status=404)
-    except json.JSONDecodeError:
-        return JsonResponse({
-            'success': False,
-            'error': 'Invalid JSON'
-        }, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
+    data = json.loads(request.body)
+
+    doc_id = data.get("document_id")
+    question = data.get("question")
+
+    if not question:
+        print("❌ No question received", question)
+        return JsonResponse({"error": "Empty question"}, status=400)
+
+    doc = PDFDocument.objects.get(id=doc_id)
+
+    # Load bot
+    if doc_id not in chatbots:
+        bot = PDFChatbot()
+        bot.load(doc.vector_index_path)
+        chatbots[doc_id] = bot
+    else:
+        bot = chatbots[doc_id]
+
+    answer = bot.ask(question)
+    print(f"📄 Answer for '{question}': {answer}")
+    ChatHistory.objects.create(
+        document=doc,
+        question=question,
+        answer=answer
+    )
+
+    return JsonResponse({
+        "answer": answer
+    })
+
 
 @require_http_methods(["GET"])
 def get_chat_history(request, doc_id):
