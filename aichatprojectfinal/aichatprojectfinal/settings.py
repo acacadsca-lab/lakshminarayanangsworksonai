@@ -21,7 +21,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-sr500$69l9*a$ipn$-@2#
 # DEBUG = config('DEBUG', default=False, cast=bool)
 DEBUG=True
 
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,172.16.16.48, my-ml-service.onrender.com').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*').split(',')
 RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default=None)
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
@@ -33,7 +33,7 @@ if RENDER_EXTERNAL_HOSTNAME:
 #SECRET_KEY = 'django-insecure-sr500$69l9*a$ipn$-@2#+mgllu_+l0aqx$n&kjb8^g69b563u'
 
 
-DEBUG = True
+DEBUG = False
 
 
 
@@ -129,10 +129,20 @@ CSRF_TRUSTED_ORIGINS = [
 ]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not DEBUG:
-    SECURE_SSL_REDIRECT = True
+    SECURE_SSL_REDIRECT = False   # ❗ change this
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
+
     SECURE_BROWSER_XSS_FILTER = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     X_FRAME_OPTIONS = 'DENY'
+else:
+    SECURE_SSL_REDIRECT = False
+    SESSION_COOKIE_SECURE = False
+    CSRF_COOKIE_SECURE = False
+
+    SECURE_BROWSER_XSS_FILTER = False
+    SECURE_CONTENT_TYPE_NOSNIFF = False
+    X_FRAME_OPTIONS = 'DENY'
+
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

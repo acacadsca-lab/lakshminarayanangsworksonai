@@ -19,7 +19,6 @@ from django.urls import path , include,re_path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('',include('chatapp.urls')),
-    re_path('',include('chatapp.urls')),
-    re_path('botchat/',include('memorybot.urls')),
+    path('',include('aichatprojectfinal.chatapp.urls')),
+    re_path('botchat/',include('aichatprojectfinal.memorybot.urls')),
 ]

@@ -6,7 +6,7 @@ from django.conf.urls.static import static
 from django.conf import settings
 
 urlpatterns = [
-    path('', IndexView.as_view(),name="index"),
+    path('', IndexView.as_view(),name="home"),
     path('ai_image_gen/', ImagegenView.as_view(),name="ai_image_gen"),
     path('code_generator/', CodeGeneratorView.as_view(),name="code_generator"),
     # path('voice_clone/', VoiceCloneView.as_view(),name="voice_clone"),
