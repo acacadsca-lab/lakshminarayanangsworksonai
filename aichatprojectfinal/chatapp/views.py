@@ -126,39 +126,34 @@ class IndexView(View):
             context['reply']=response.choices[0].message.content
         return JsonResponse(context)
     
+
+
 @method_decorator(csrf_exempt, name='dispatch')
 class ImagegenView(View):
 
     def get(self, request):
-        return render(request, 'imagegen.html')
+        return JsonResponse({"message": "Image API Ready ✅"})
 
     def post(self, request):
+        import pollinations
         try:
-            if request.content_type == "application/json":
-                data = json.loads(request.body)
-            else:
-                data = request.POST  # fallback
-
+            data = json.loads(request.body)
             prompt = data.get("prompt", "")
-
             if not prompt:
                 return JsonResponse({"error": "No prompt provided"}, status=400)
-
-            pipe = get_pipeline()
-            pipe.enable_attention_slicing()
-
-            result = pipe(prompt, num_inference_steps=30, guidance_scale=7.5)
-            image = result.images[0]
-
+            model = pollinations.Image(
+                width=512,
+                height=512,
+                enhance=True
+            )
+            image = model(prompt)
             buffer = BytesIO()
             image.save(buffer, format="PNG")
             buffer.seek(0)
-
             image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-
             return JsonResponse({
                 "success": True,
-                "image_url": image_base64
+                "image": image_base64
             })
 
         except Exception as e:
