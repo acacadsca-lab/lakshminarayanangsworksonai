@@ -133,21 +133,38 @@ class ImagegenView(View):
             prompt = data.get("prompt", "")
             if not prompt:
                 return JsonResponse({"error": "No prompt provided"}, status=400)
-            model = pollinations.Image(
-                width=512,
-                height=512,
-                enhance=True
+            from urllib.parse import quote
+            import random
+
+            prompt_encoded = quote(prompt)
+            seed = random.randint(1, 999999999)
+
+            image_url = (
+                f"https://image.pollinations.ai/prompt/{prompt_encoded}"
+                f"?model=zimage"
+                f"&width=512"
+                f"&height=512"
+                f"&nologo=false"
+                f"&private=false"
+                f"&enhance=true"
+                f"&safe=false"
+                f"&seed={seed}"
             )
-            image = model(prompt)
-            print(image,'-----------------------')
-            buffer = BytesIO()
-            image.save(buffer, format="PNG")
-            buffer.seek(0)
-            image_base64 = base64.b64encode(buffer.getvalue()).decode('utf-8')
-            print(image_base64,'------------------------------')
+
+            # model = pollinations.Image(
+            #     width=512,
+            #     height=512,
+            #     enhance=True
+            # )
+            # image = model(prompt)
+            # print(image,'-----------------------')
+            # buffer = BytesIO()
+            # image.save(buffer, format="PNG")
+            # buffer.seek(0)
+            # print(image,'image')
             return JsonResponse({
                 "success": True,
-                "image": image_base64
+                "image": str(image_url)
             })
 
         except Exception as e:
@@ -159,42 +176,93 @@ class ImagegenView(View):
 @method_decorator(csrf_exempt, name='dispatch')
 class ChatbotView(View):
     SESSION_TYPE = 'chatbot' 
-    def get(self, request):
-        """Render chatbot page with existing sessions"""
-        session_id = request.GET.get('session_id')
-        print(session_id,'--========--==========-============-==========')
-        session_key = self._get_or_create_session_key(request)
-        sessions = self._get_user_sessions(request, session_key)
+    # def get(self, request):
+    #     """Render chatbot page with existing sessions"""
+    #     session_id = request.GET.get('session_id')
+    #     print(session_id,'--========--==========-============-==========')
+    #     session_key = self._get_or_create_session_key(request)
+    #     sessions = self._get_user_sessions(request, session_key)
         
+    #     if session_id:
+    #         try:
+    #             chat_session = ChatSession.objects.get(session_id=session_id)
+    #         except ChatSession.DoesNotExist:
+    #             chat_session = ChatSession.objects.create(title="New Chat")
+    #     else:
+    #         chat_session = ChatSession.objects.create(title="New Chat")
+        
+    #     # Get all user sessions (if user is authenticated)
+    #     if request.user.is_authenticated:
+    #         sessions = ChatSession.objects.filter(user=request.user, is_active=True)
+    #     else:
+    #         # For anonymous users, get recent sessions from cookies/session
+    #         sessions = self._get_user_sessions(request, session_key).order_by('-updated_at')
+        
+    #     # Get messages for current session
+    #     messages = ChatMessage.objects.filter(session=chat_session)
+    #     for session in sessions:
+    #         print(session.session_id)
+        
+    #     context = {
+    #         'current_session': chat_session,
+    #         'messages': messages,
+    #         'sessions': sessions[:10],
+    #         'session_type': self.SESSION_TYPE,
+    #     }
+        
+    #     return render(request, 'chatbot.html', context)
+    
+
+    def get(self, request):
+        session_id = request.GET.get('session_id')
+
+        session_key = self._get_or_create_session_key(request)
+
+        # Get all sessions
+        sessions = self._get_user_sessions(request, session_key).order_by('-updated_at')
+
+        chat_session = None
+
+        # Load existing session
         if session_id:
             try:
-                chat_session = ChatSession.objects.get(session_id=session_id)
+                chat_session = ChatSession.objects.get(
+                    session_id=session_id,
+                    session_type=self.SESSION_TYPE
+                )
             except ChatSession.DoesNotExist:
-                chat_session = ChatSession.objects.create(title="New Chat")
-        else:
-            chat_session = ChatSession.objects.create(title="New Chat")
-        
-        # Get all user sessions (if user is authenticated)
-        if request.user.is_authenticated:
-            sessions = ChatSession.objects.filter(user=request.user, is_active=True)
-        else:
-            # For anonymous users, get recent sessions from cookies/session
-            sessions = ChatSession.objects.filter(session_id=chat_session.session_id)
-        
-        # Get messages for current session
-        messages = ChatMessage.objects.filter(session=chat_session)
-        for session in sessions:
-            print(session.session_id)
-        
+                pass
+
+        # ONLY create new session if no valid session exists
+        if not chat_session:
+
+            if request.user.is_authenticated:
+                chat_session = ChatSession.objects.create(
+                    user=request.user,
+                    session_type=self.SESSION_TYPE,
+                    title="New Chat"
+                )
+            else:
+                chat_session = ChatSession.objects.create(
+                    anonymous_session_key=session_key,
+                    session_type=self.SESSION_TYPE,
+                    title="New Chat"
+                )
+
+        messages = ChatMessage.objects.filter(
+            session=chat_session
+        ).order_by('timestamp')
+
         context = {
             'current_session': chat_session,
             'messages': messages,
-            'sessions': sessions[:10],
+            'sessions': sessions,
             'session_type': self.SESSION_TYPE,
         }
-        
+
         return render(request, 'chatbot.html', context)
-    
+
+
     def _get_or_create_session_key(self, request):
         """Get or create session key for anonymous users"""
         if not request.session.session_key:
@@ -357,7 +425,7 @@ class ChatbotView(View):
             response = client.chat.completions.create(
                 model="gpt-4",
                 messages=api_messages,
-                web_search=False
+                web_search=True
             )
             
             bot_reply = response.choices[0].message.content
@@ -408,10 +476,8 @@ class SessionManagementView(View):
         return JsonResponse({'sessions': sessions_data})
     
     def post(self, request):
-        """Create new session"""
         data = json.loads(request.body)
         action = data.get('action')
-        
         if action == 'create':
             session = ChatSession.objects.create(
                 title=data.get('title', 'New Chat')
@@ -585,7 +651,7 @@ def upload_pdf(request):
 
         return JsonResponse({
             "success": True,
-            "doc_id": doc.id
+            "doc_id": doc.pk
         })
 
     return JsonResponse({"error": "Upload failed"}, status=400)

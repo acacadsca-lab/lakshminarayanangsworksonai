@@ -1336,7 +1336,7 @@
 </script>
     <script>
         // ==================== CONFIGURATION ====================
-        const API_URL = window.location.href;
+        const API_URL = '/chatbot/';
         let currentSessionId = '{{ current_session.session_id|default:"" }}';
 
         // ==================== DOM ELEMENTS ====================
@@ -1704,7 +1704,9 @@ function escapeHtml(text) {
 
                 const data = await response.json();
                 currentSessionId = data.session_id;
-                window.location.href = `/chatbot/?session_id=${currentSessionId}`;
+                async function createNewSession() {
+                        window.location.href = "/chatbot/";
+                    }
             } catch (error) {
                 console.error('Error creating session:', error);
             }

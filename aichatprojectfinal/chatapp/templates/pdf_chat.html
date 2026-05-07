@@ -360,8 +360,8 @@
             <!-- Document List -->
             <ul class="document-list">
                 {% for doc in documents %}
-                <li class="document-item {% if document.id == doc.id %}active{% endif %}" 
-                    onclick="window.location.href='{% url 'pdf_detail' doc.id %}'">
+                <li class="document-item {% if document.id == doc.id %}active{% endif %}"
+    onclick="location.href='{% url "pdf_detail" doc.id %}'">
                     <div>
                         <strong>{{ doc.title }}</strong>
                         <div style="font-size: 12px; opacity: 0.7;">
@@ -442,7 +442,7 @@
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // ==================== CONFIGURATION ====================
-        const currentDocId = {{ document.id|default:"null" }};
+        const currentDocId = `{{ document.id|default:"null" }}`;
         
         // Configure marked options
         if (typeof marked !== 'undefined') {
@@ -522,9 +522,10 @@
                         const data = await response.json();
                         
                         if (data.success) {
+
                             statusDiv.innerHTML = '<div class="status-message success">✅ PDF processed successfully!</div>';
                             setTimeout(() => {
-                                window.location.href = `/pdf/${data.document_id}/`;
+                                window.location.href = `/pdf/${data.doc_id}/`;
                             }, 1000);
                         } else {
                             statusDiv.innerHTML = `<div class="status-message error">❌ ${data.error}</div>`;
