@@ -11,8 +11,7 @@ from chatapp.models import ChatHistory, PDFDocument
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views import View
-from g4f.client import Client
-client = Client()
+
 from django.conf import settings
 from io import BytesIO
 import subprocess
@@ -31,7 +30,6 @@ from .models import ChatSession, ChatMessage, UserPreferences, CodeSnippet
 import json
 from diffusers import StableDiffusionPipeline
 import torch
-from g4f.client import Client
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -100,6 +98,7 @@ class IndexView(View):
             user_text = ""
             if "parts" in last_message and len(last_message["parts"]) > 0:
                 user_text = last_message["parts"][0].get("text", "")
+            from g4f.client import Client
             client = Client()
             response = client.chat.completions.create(
                 model="gpt-4",
@@ -417,6 +416,7 @@ class ChatbotView(View):
             
             # Prepare messages for API
             api_messages = [system_message] + conversation_history
+            from g4f.client import Client
             
             # Call OpenAI API
             client = Client()
