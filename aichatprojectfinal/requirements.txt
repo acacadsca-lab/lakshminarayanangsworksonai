@@ -1,5 +1,4 @@
 # 🔹 Django stack
-<<<<<<< HEAD
 Django
 gunicorn
 whitenoise
@@ -30,38 +29,36 @@ pypdf
 # 🔹 Utilities
 PyPDF2
 g4f
-=======
-Django==4.2.11
-gunicorn==21.2.0
-whitenoise==6.6.0
-dj-database-url==2.1.0
-python-decouple==3.8
-psycopg2-binary==2.9.9
-sqlparse==0.4.4
-asgiref==3.7.2
-packaging==23.2
+Django
+gunicorn
+whitenoise
+dj-database-url
+python-decouple
+psycopg2-binary
+sqlparse
+asgiref
+packaging
 
 # 🔹 AI / ML core
 diffusers
-transformers==4.40.2
-huggingface_hub==0.23.4
-sentence-transformers==2.6.1
+transformers
+huggingface_hub
+sentence-transformers
 
 # 🔹 Audio / speech
-librosa==0.10.1
-pyannote.audio==3.1.1
+librosa
+pyannote.audio
 
 # 🔹 LangChain ecosystem
-langchain==0.1.20
-langchain_core==0.1.52
-langchain_community==0.0.38
-langchain_huggingface==0.0.3
+langchain
+langchain_core
+langchain_community
+langchain_huggingface
 pypdf
 
 # 🔹 Utilities
-PyPDF2==3.0.1
-g4f==0.2.6.1
->>>>>>> ef11ffcb4387eff0cb348d7d815ef7c457d87342
+PyPDF2
+g4f
 
 # 🔹 Optional / experimental
 gguf
