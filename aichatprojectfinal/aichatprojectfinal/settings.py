@@ -123,7 +123,6 @@ WSGI_APPLICATION = 'aichatprojectfinal.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-<<<<<<< HEAD
 # import os
 
 # DATABASES = {
@@ -147,16 +146,6 @@ DATABASES = {
     }
 }
 
-=======
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
-
-
->>>>>>> ef11ffcb4387eff0cb348d7d815ef7c457d87342
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
