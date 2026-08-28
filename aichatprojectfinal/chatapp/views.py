@@ -29,10 +29,6 @@ from django.utils import timezone
 from .models import ChatSession, ChatMessage, UserPreferences, CodeSnippet
 import json
 from diffusers import StableDiffusionPipeline
-<<<<<<< HEAD
-=======
-import torch
->>>>>>> ef11ffcb4387eff0cb348d7d815ef7c457d87342
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.models import User
 from django.contrib.auth.decorators import login_required
@@ -120,7 +116,6 @@ class IndexView(View):
     
 
 
-<<<<<<< HEAD
 # @method_decorator(csrf_exempt, name='dispatch')
 # class ImagegenView(View):
 
@@ -265,53 +260,6 @@ class ImagegenView(View):
             return JsonResponse({
                 "success": True,
                 "image": base64_image
-=======
-@method_decorator(csrf_exempt, name='dispatch')
-class ImagegenView(View):
-
-    def get(self, request):
-        return render(request,'imagegen.html')
-
-    def post(self, request):
-
-        try:
-            data = json.loads(request.body)
-            prompt = data.get("prompt", "")
-            if not prompt:
-                return JsonResponse({"error": "No prompt provided"}, status=400)
-            from urllib.parse import quote
-            import random
-
-            prompt_encoded = quote(prompt)
-            seed = random.randint(1, 999999999)
-
-            image_url = (
-                f"https://image.pollinations.ai/prompt/{prompt_encoded}"
-                f"?model=zimage"
-                f"&width=512"
-                f"&height=512"
-                f"&nologo=false"
-                f"&private=false"
-                f"&enhance=true"
-                f"&safe=false"
-                f"&seed={seed}"
-            )
-
-            # model = pollinations.Image(
-            #     width=512,
-            #     height=512,
-            #     enhance=True
-            # )
-            # image = model(prompt)
-            # print(image,'-----------------------')
-            # buffer = BytesIO()
-            # image.save(buffer, format="PNG")
-            # buffer.seek(0)
-            # print(image,'image')
-            return JsonResponse({
-                "success": True,
-                "image": str(image_url)
->>>>>>> ef11ffcb4387eff0cb348d7d815ef7c457d87342
             })
 
         except Exception as e:
