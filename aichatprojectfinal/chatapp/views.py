@@ -193,7 +193,7 @@ class IndexView(View):
 #                 "success": False,
 #                 "message": str(e)
 #             }, status=500)
-
+   
 class ImagegenView(View):
 
     pipe = None
