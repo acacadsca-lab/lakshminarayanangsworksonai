@@ -52,6 +52,7 @@ pypdf
 
 # 🔹 Utilities
 PyPDF2
+g4f
 
 # 🔹 Optional / experimental
 gguf
