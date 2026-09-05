@@ -121,7 +121,7 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'aichatprojectfinal.wsgi.application'
 
-
+MISE_PYTHON_GITHUB_ATTESTATIONS=False
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
