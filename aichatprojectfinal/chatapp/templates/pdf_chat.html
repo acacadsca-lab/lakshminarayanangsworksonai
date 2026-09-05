@@ -363,14 +363,14 @@
             <ul class="document-list">
                 {% for doc in documents %}
                 <li class="document-item {% if document.id == doc.id %}active{% endif %}"
-    onclick="location.href='{% url "pdf_detail" doc.id %}'">
+    onclick=`location.href="{% url 'pdf_detail' doc.id %}"`>
                     <div>
                         <strong>{{ doc.title }}</strong>
                         <div style="font-size: 12px; opacity: 0.7;">
                             {{ doc.uploaded_at|date:"M d, Y" }}
                         </div>
                     </div>
-                    <button class="delete-btn" onclick="event.stopPropagation(); deleteDocument({{ doc.id }})">
+                    <button class="delete-btn" onclick=`event.stopPropagation(); deleteDocument({{ doc.id }})`>
                         🗑️
                     </button>
                 </li>

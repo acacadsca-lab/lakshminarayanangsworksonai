@@ -54,6 +54,8 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     "corsheaders.middleware.CorsMiddleware",
+        "whitenoise.middleware.WhiteNoiseMiddleware",
+
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -143,6 +145,10 @@ DATABASES = {
         "PASSWORD": "Lscubes@2272",
         "HOST": "aws-0-ap-northeast-1.pooler.supabase.com",
         "PORT": "5432",
+        "default": dj_database_url.config(
+        default=os.environ.get("ENDPOINT_SUPABASE_s3"),
+        conn_max_age=600,
+    )
     }
 }
 
@@ -180,7 +186,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 CSRF_TRUSTED_ORIGINS = [
     'https://*.onrender.com',
-    'https://*.railway.com',
+    'https://*.railway.app',
 ]
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 if not DEBUG:
